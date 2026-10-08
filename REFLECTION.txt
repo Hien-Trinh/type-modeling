@@ -1,0 +1,1 @@
+ArrayList addAll, first time seeing that. Paul used self == other for primitive check, which is correct because these classes don't define __eq__ so it fallbacks to identity, using self is other is safer generally in my opinion.
