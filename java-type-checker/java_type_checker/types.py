@@ -8,8 +8,10 @@ class JavaType(object):
         name (str): Name of this type. **Note:** Names are not necessarily unique.
     """
 
-    is_object_type = False   #: Indicates whether members of this type are objects (bool)
-    is_instantiable = False  #: Indicates whether `new` can create instances of this type (bool)
+    #: Indicates whether members of this type are objects (bool)
+    is_object_type = False
+    #: Indicates whether `new` can create instances of this type (bool)
+    is_instantiable = False
 
     def __init__(self, name):
         self.name = name
@@ -20,7 +22,8 @@ class JavaType(object):
 
         Subclasses must override this.
         """
-        raise NotImplementedError(type(self).__name__ + " must override is_subtype_of()")
+        raise NotImplementedError(
+            type(self).__name__ + " must override is_subtype_of()")
 
     def is_supertype_of(self, other):
         """Convenience counterpart to is_subtype_of().
@@ -33,7 +36,8 @@ class JavaType(object):
         Raises:
             NoSuchJavaMethod if the type has no method with the give name (or no methods at all)
         """
-        raise NoSuchJavaMethod("Type {0} does not have methods".format(self.name))
+        raise NoSuchJavaMethod(
+            "Type {0} does not have methods".format(self.name))
 
 
 class JavaConstructor(object):
@@ -52,6 +56,7 @@ class JavaConstructor(object):
     Attributes:
         parameter_types (list of JavaType): Declared parameter types
     """
+
     def __init__(self, parameter_types=[]):
         self.parameter_types = parameter_types
 
@@ -77,6 +82,7 @@ class JavaMethod(object):
         parameter_types (list of JavaType): Declared parameter types
         return_type (JavaType): Method’s declared return type
     """
+
     def __init__(self, name, parameter_types=[], return_type=None):
         self.name = name
         self.parameter_types = parameter_types
@@ -88,6 +94,9 @@ class JavaPrimitiveType(JavaType):
 
     Primitive types are not object types and do not have methods.
     """
+
+    def is_subtype_of(self, other):
+        return self is other
 
 
 class JavaObjectType(JavaType):
@@ -122,6 +131,14 @@ class JavaObjectType(JavaType):
     def add_method(self, method):
         self.methods[method.name] = method
 
+    def is_subtype_of(self, other):
+        if self is other:
+            return True
+        for supertype in self.direct_supertypes:
+            if supertype.is_subtype_of(other):
+                return True
+        return False
+
     def method_named(self, name):
         try:
             return self.methods[name]
@@ -131,7 +148,8 @@ class JavaObjectType(JavaType):
                     return supertype.method_named(name)
                 except NoSuchJavaMethod:
                     pass
-            raise NoSuchJavaMethod("{0} has no method named {1}".format(self.name, name))
+            raise NoSuchJavaMethod(
+                "{0} has no method named {1}".format(self.name, name))
 
 
 class JavaVoidType(JavaType):
@@ -140,6 +158,7 @@ class JavaVoidType(JavaType):
     It is never legal to use the result of a method returning void inside a larger expression.
     Void is therefore subtype only of itself, and not any other type.
     """
+
     def __init__(self):
         super().__init__("void")
 
@@ -150,8 +169,17 @@ class JavaNullType(JavaType):
     Null acts as though it is a subtype of all object types. However, it raises an exception for any
     attempt to look up a method.
     """
+
+    is_object_type = True
+
     def __init__(self):
         super().__init__("null")
+
+    def is_subtype_of(self, other):
+        return other.is_object_type
+
+    def method_named(self, name):
+        raise NoSuchJavaMethod("Cannot invoke method {0}() on null".format(name))
 
 
 class JavaTypeError(Exception):
@@ -171,17 +199,18 @@ class JavaBuiltInTypes:
 
     (We only include a few of Java's language-provided types.)
     """
-    VOID    = JavaVoidType()
+    VOID = JavaVoidType()
 
     BOOLEAN = JavaPrimitiveType("boolean")
-    INT     = JavaPrimitiveType("int")
-    DOUBLE  = JavaPrimitiveType("double")
+    INT = JavaPrimitiveType("int")
+    DOUBLE = JavaPrimitiveType("double")
 
-    NULL    = JavaNullType()
+    NULL = JavaNullType()
 
     OBJECT = JavaObjectType(
         "Object",
         direct_supertypes=[]
     )
-    OBJECT.add_method(JavaMethod("equals", parameter_types=[OBJECT], return_type=BOOLEAN))
+    OBJECT.add_method(JavaMethod("equals", parameter_types=[
+                      OBJECT], return_type=BOOLEAN))
     OBJECT.add_method(JavaMethod("hashCode", return_type=INT))
